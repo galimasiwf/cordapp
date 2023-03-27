@@ -15,8 +15,8 @@ import static net.corda.testing.driver.Driver.driver;
 import static org.junit.Assert.assertEquals;
 
 public class DriverBasedTest {
-    private final TestIdentity bankA = new TestIdentity(new CordaX500Name("BankA", "", "GB"));
-    private final TestIdentity bankB = new TestIdentity(new CordaX500Name("BankB", "", "US"));
+    private final TestIdentity bankA = new TestIdentity(new CordaX500Name("WellsFargo NA", "", "GB"));
+    private final TestIdentity bankB = new TestIdentity(new CordaX500Name("Barclays Inc", "", "US"));
 
     @Test
     public void nodeTest() {
