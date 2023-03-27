@@ -9,12 +9,12 @@ import net.corda.core.contracts.Contract;
 import net.corda.core.transactions.LedgerTransaction;
 
 public class FXTradeContract implements Contract {
-    public static String ID = "com.bootcamp.contracts.TokenContract";
+    public static String ID = "com.fxsettlement.contracts.FXTradeContract";
 
 
     public void verify(LedgerTransaction tx) throws IllegalArgumentException {
         //Bhanu
-        if (tx.getInputStates().size() != 0) {
+        if (tx.getInputStates().size() > 1) {
             throw new IllegalArgumentException("Token Contract requires zero inputs in the transaction");
         }
 
@@ -35,7 +35,8 @@ public class FXTradeContract implements Contract {
             throw new IllegalArgumentException("Token Contract requires Contract Amount to be positive  ");
         }
 
-        if (!(tx.getCommand(0).getValue() instanceof FXTradeContract.Commands.Issue)) {
+        if (!((tx.getCommand(0).getValue() instanceof FXTradeContract.Commands.Issue) ||
+                (tx.getCommand(0).getValue() instanceof FXTradeContract.Commands.Settle))) {
             throw new IllegalArgumentException("Token Contract requires transaction command to be an Issue ");
         }
 

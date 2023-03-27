@@ -4,8 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import net.corda.client.jackson.JacksonSupport;
 import net.corda.core.contracts.*;
 import net.corda.core.identity.CordaX500Name;
+import net.corda.core.identity.Party;
 import net.corda.core.messaging.CordaRPCOps;
 import net.corda.core.node.NodeInfo;
+import net.corda.core.transactions.SignedTransaction;
+
 /*
 import net.corda.finance.contracts.asset.Cash;
 import net.corda.samples.obligation.flows.IOUIssueFlow;
@@ -16,10 +19,13 @@ import net.corda.samples.obligation.states.IOUState;
 */
 
 import com.fxsettlement.states.FXTradeState;
+import com.fxsettlement.flows.FXTradeIssueFlow;
+import com.fxsettlement.flows.FXTradeSettleFlow;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.lang.*;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.slf4j.Logger;
@@ -27,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.*;
 
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -144,6 +151,104 @@ public class MainController {
     public List<StateAndRef<FXTradeState>> getFXTrades() {
         // Filter by states type: FXTrades.
         return proxy.vaultQuery(FXTradeState.class).getStates();
+    }
+
+    @PutMapping(value =  "/submitTrade" , produces = TEXT_PLAIN_VALUE )
+    public ResponseEntity<String> issueFXTrade( @RequestParam(value = "responder") String responder,
+                                                @RequestParam(value = "buyamount") Integer buyamount,
+                                                @RequestParam(value = "sellamount") Integer sellamount,
+                                                @RequestParam(value = "sellcurrency") String sellcurrency,
+                                                @RequestParam(value = "buycurrency") String buycurrency,
+                                                @RequestParam(value = "tradedate") String tradedate,
+                                                @RequestParam(value = "settledate") String settledate,
+                                                @RequestParam(value = "exchangerate") Float exchangerate,
+                                                @RequestParam(value = "buysell") String buysell,
+                                                @RequestParam(value = "matchstatus") String matchstatus,
+                                                @RequestParam(value = "settlementstatus") String settlementstatus
+    ) throws IllegalArgumentException {
+        // Get party objects for myself and the counterparty.
+        Party me = proxy.nodeInfo().getLegalIdentities().get(0);
+        Party lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse(responder))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        // Create a new IOU states using the parameters given.
+        try {
+            FXTradeState state = new FXTradeState(me, lender, buyamount.intValue(), sellamount.intValue(), buycurrency,sellcurrency,tradedate,"032123",80,"Buy","UNMATCHED","SETTLED");
+            // Start the IOUIssueFlow. We block and waits for the flows to return.
+            SignedTransaction result = proxy.startTrackedFlowDynamic(FXTradeIssueFlow.FXTradeIssueFlowInitiator.class,lender, buyamount.intValue(), sellamount.intValue(), buycurrency, sellcurrency, tradedate, settledate ,exchangerate.floatValue(), buysell, matchstatus, settlementstatus ).getReturnValue().get();
+            //SignedTransaction result = proxy.startTrackedFlowDynamic(FXTradeIssueFlow.FXTradeIssueFlowInitiator.class,state).getReturnValue().get();
+            // Return the response.
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body("Transaction id "+ result.getId() + " && UniqueIdentifier "+ result.getTx() + " committed to ledger.\n " + result.getTx().getOutput(0));
+            // For the purposes of this demo app, we do not differentiate by exception type.
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        }
+    }
+
+    @PutMapping(value =  "/submitSettlement" , produces = TEXT_PLAIN_VALUE )
+    public ResponseEntity<String> issueFXSettlement( @RequestParam(value = "responder") String responder,
+                                                @RequestParam(value = "buyamount") Integer buyamount,
+                                                @RequestParam(value = "sellamount") Integer sellamount,
+                                                @RequestParam(value = "sellcurrency") String sellcurrency,
+                                                @RequestParam(value = "buycurrency") String buycurrency,
+                                                @RequestParam(value = "tradedate") String tradedate,
+                                                @RequestParam(value = "settledate") String settledate,
+                                                @RequestParam(value = "exchangerate") Float exchangerate,
+                                                @RequestParam(value = "buysell") String buysell,
+                                                @RequestParam(value = "matchstatus") String matchstatus,
+                                                @RequestParam(value = "settlementstatus") String settlementstatus
+    ) throws IllegalArgumentException {
+        // Get party objects for myself and the counterparty.
+        Party me = proxy.nodeInfo().getLegalIdentities().get(0);
+        Party lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse(responder))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        // Create a new IOU states using the parameters given.
+        try {
+            FXTradeState state = new FXTradeState(me, lender, buyamount.intValue(), sellamount.intValue(), buycurrency,sellcurrency,tradedate,"032123",80,"Buy","UNMATCHED","SETTLED");
+            // Start the IOUIssueFlow. We block and waits for the flows to return.
+            SignedTransaction result = proxy.startTrackedFlowDynamic(FXTradeSettleFlow.FXTradeSettleFlowInitiator.class,lender, buyamount.intValue(), sellamount.intValue(), buycurrency, sellcurrency, tradedate, settledate ,exchangerate.floatValue(), buysell, matchstatus, settlementstatus ).getReturnValue().get();
+            //SignedTransaction result = proxy.startTrackedFlowDynamic(FXTradeIssueFlow.FXTradeIssueFlowInitiator.class,state).getReturnValue().get();
+            // Return the response.
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body("Transaction id "+ result.getId() + " && UniqueIdentifier "+ result.getTx()+  "committed to ledger.\n " + result.getTx().getOutput(0));
+            // For the purposes of this demo app, we do not differentiate by exception type.
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        }
+    }
+
+    //@RequestMapping(value="/submitTrade", method = RequestMethod.POST)
+    @PutMapping(value =  "/submitTrade-Test", produces = TEXT_PLAIN_VALUE )
+    public ResponseEntity<String> issueFXTrade(@RequestParam(value = "buyamount") Integer buyamount,
+                                               @RequestParam(value = "sellamount") Integer sellamount,
+                                               @RequestParam(value = "sellcurrency") String sellcurrency,
+                                               @RequestParam(value = "buycurrency") String buycurrency,
+                                               @RequestParam(value = "tradedate") String tradedate
+                                               ) throws IllegalArgumentException {
+        // Get party objects for myself and the counterparty.
+        Party me = proxy.nodeInfo().getLegalIdentities().get(0);
+        Party lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse("O=PartyC,L=Los Angelos,C=US"))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        // Create a new IOU states using the parameters given.
+        try {
+            FXTradeState state = new FXTradeState(me, lender, buyamount.intValue(), sellamount.intValue(), buycurrency,sellcurrency,tradedate,"032123",80,"Buy","UNMATCHED","SETTLED");
+            // Start the IOUIssueFlow. We block and waits for the flows to return.
+            float er = 80.0f;
+            SignedTransaction result = proxy.startTrackedFlowDynamic(FXTradeIssueFlow.FXTradeIssueFlowInitiator.class,lender, buyamount.intValue(), sellamount.intValue(), buycurrency, sellcurrency, tradedate, "032123", er, "Buy", "UNMATCHED", "SETTLED" ).getReturnValue().get();
+            //SignedTransaction result = proxy.startTrackedFlowDynamic(FXTradeIssueFlow.FXTradeIssueFlowInitiator.class,state).getReturnValue().get();
+            // Return the response.
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body("Transaction id "+ result.getId() +" committed to ledger.\n " + result.getTx().getOutput(0));
+            // For the purposes of this demo app, we do not differentiate by exception type.
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        }
     }
 
     /*

@@ -15,7 +15,7 @@ public class ContractTests {
     TestIdentity alice = new TestIdentity(new CordaX500Name("Alice",  "TestLand",  "US"));
     TestIdentity bob = new TestIdentity(new CordaX500Name("Alice",  "TestLand",  "US"));
 
-    private FXTradeState FXTradeState = new FXTradeState(alice.getParty(), bob.getParty(), 100,80000, "USD", "INR",  "03172023");
+    private FXTradeState FXTradeState = new FXTradeState(alice.getParty(), bob.getParty(), 100,80000, "USD", "INR", "03152023", "03172023", 80, "Buy","MATCHED","SETTLED");
 
 
 //    @Test

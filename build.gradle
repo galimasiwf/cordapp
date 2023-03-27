@@ -69,6 +69,11 @@ sourceSets {
 }
 //Module dependencis
 dependencies {
+    compileOnly("org.projectlombok:lombok:1.18.22")
+    annotationProcessor("org.projectlombok:lombok:1.18.22")
+    testCompileOnly("org.projectlombok:lombok:1.18.22")
+    testAnnotationProcessor("org.projectlombok:lombok:1.18.22")
+
     // Corda dependencies.
     cordaCompile "$corda_core_release_group:corda-core:$corda_core_release_version"
     cordaCompile "$corda_release_group:corda-node-api:$corda_release_version"

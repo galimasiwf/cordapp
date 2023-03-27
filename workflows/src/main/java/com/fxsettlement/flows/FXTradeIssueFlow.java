@@ -19,20 +19,35 @@ public class FXTradeIssueFlow {
     @InitiatingFlow
     @StartableByRPC
     public static class FXTradeIssueFlowInitiator extends FlowLogic<SignedTransaction> {
-        private final Party owner;
-        private final String buycurrency;
-        private final String sellcurrency;
+        private final Party responder;
+        private final String buysell;
         private final int buyamount;
         private final int sellamount;
+        private final String buycurrency;
+        private final String sellcurrency;
+        private final float exchangerate;
+        private final String tradedate;
         private final String settledate;
-        public FXTradeIssueFlowInitiator(Party owner, String buycurrency, int buyamount, String sellcurrency, int sellamount, String settledate ) {
-            this.owner = owner;
-            this.buycurrency = buycurrency;
-            this.buyamount = buyamount;
-            this.sellcurrency = sellcurrency;
-            this.sellamount = sellamount;
-            this.settledate = settledate;
+        private final String matchstatus;
+        private final String settlementstatus;
 
+        //private final String paymentstatus;
+
+        //private final float amount;
+        //private final String currencyPair;
+
+        public FXTradeIssueFlowInitiator(Party responder, int buyamount, int sellamount, String buycurrency, String sellcurrency, String tradedate, String settledate, float exchangerate, String buysell, String matchstatus, String settlementstatus) {
+            this.responder = responder;
+            this.buyamount = buyamount;
+            this.sellamount = sellamount;
+            this.buycurrency = buycurrency;
+            this.sellcurrency = sellcurrency;
+            this.tradedate = tradedate;
+            this.settledate = settledate;
+            this.exchangerate = exchangerate;
+            this.buysell = buysell;
+            this.matchstatus = matchstatus;
+            this.settlementstatus = settlementstatus;
         }
 
         private final ProgressTracker progressTracker = new ProgressTracker();
@@ -52,17 +67,17 @@ public class FXTradeIssueFlow {
             Party issuer = getOurIdentity();
 
             // We create our new TokenState.
-            FXTradeState FXTradeState = new FXTradeState(issuer, owner, buyamount, sellamount, buycurrency,sellcurrency, settledate);
+            FXTradeState FXTradeState = new FXTradeState(issuer, responder, buyamount, sellamount, buycurrency,sellcurrency, tradedate, settledate, exchangerate, buysell,matchstatus,settlementstatus);
 
             // We build our transaction.
             TransactionBuilder transactionBuilder = new TransactionBuilder(notary)
                                                 .addOutputState(FXTradeState)
-                                                .addCommand(new FXTradeContract.Commands.Issue(), Arrays.asList(issuer.getOwningKey(),owner.getOwningKey()));
+                                                .addCommand(new FXTradeContract.Commands.Issue(), Arrays.asList(issuer.getOwningKey(),responder.getOwningKey()));
 
             // We check our transaction is valid based on its contracts.
             transactionBuilder.verify(getServiceHub());
 
-            FlowSession session = initiateFlow(owner);
+            FlowSession session = initiateFlow(responder);
 
             // We sign the transaction with our private key, making it immutable.
             SignedTransaction signedTransaction = getServiceHub().signInitialTransaction(transactionBuilder);
