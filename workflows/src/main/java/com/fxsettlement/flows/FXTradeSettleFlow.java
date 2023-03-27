@@ -3,23 +3,20 @@ package com.fxsettlement.flows;
 import co.paralleluniverse.fibers.Suspendable;
 import com.fxsettlement.contracts.FXTradeContract;
 import com.fxsettlement.states.FXTradeState;
-import net.corda.core.contracts.Amount;
 import net.corda.core.contracts.Command;
 import net.corda.core.contracts.StateAndRef;
 import net.corda.core.contracts.UniqueIdentifier;
 import net.corda.core.flows.*;
-import net.corda.core.identity.CordaX500Name;
 import net.corda.core.identity.Party;
 import net.corda.core.node.services.Vault;
 import net.corda.core.node.services.vault.QueryCriteria;
 import net.corda.core.transactions.SignedTransaction;
 import net.corda.core.transactions.TransactionBuilder;
 import net.corda.core.utilities.ProgressTracker;
-//import net.corda.confidential.IdentitySyncFlow;
+
 
 import java.security.PublicKey;
 import java.util.Arrays;
-import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,21 +27,36 @@ public class FXTradeSettleFlow {
     @InitiatingFlow
     @StartableByRPC
     public static class FXTradeSettleFlowInitiator extends FlowLogic<SignedTransaction> {
-        private final Party owner;
-        private final String buycurrency;
-        private final String sellcurrency;
+        private final Party responder;
+        private final String buysell;
         private final int buyamount;
         private final int sellamount;
+        private final String buycurrency;
+        private final String sellcurrency;
+        private final float exchangerate;
+        private final String tradedate;
         private final String settledate;
+        private final String matchstatus;
+        private final String settlementstatus;
+
+        //private final String paymentstatus;
+        //private final float amount;
+        //private final String currencyPair;
+
         private final UniqueIdentifier stateLinearId ;
 
-        public FXTradeSettleFlowInitiator (Party owner, String buycurrency,int buyamount, String sellcurrency, int sellamount, String settledate,UniqueIdentifier stateLinearId ) {
-            this.owner = owner;
-            this.buycurrency = buycurrency;
+        public FXTradeSettleFlowInitiator(Party responder, int buyamount, int sellamount, String buycurrency, String sellcurrency, String tradedate, String settledate, float exchangerate, String buysell, String matchstatus, String settlementstatus,UniqueIdentifier stateLinearId) {
+            this.responder = responder;
             this.buyamount = buyamount;
-            this.sellcurrency = sellcurrency;
             this.sellamount = sellamount;
+            this.buycurrency = buycurrency;
+            this.sellcurrency = sellcurrency;
+            this.tradedate = tradedate;
             this.settledate = settledate;
+            this.exchangerate = exchangerate;
+            this.buysell = buysell;
+            this.matchstatus = matchstatus;
+            this.settlementstatus = settlementstatus;
             this.stateLinearId = stateLinearId;
         }
 
@@ -69,7 +81,7 @@ public class FXTradeSettleFlow {
             Vault.Page results = getServiceHub().getVaultService().queryBy(FXTradeState.class, queryCriteria);
             StateAndRef inputStateAndRefToSettle = (StateAndRef) results.getStates().get(0);
             FXTradeState inputStateToSettle = (FXTradeState) ((StateAndRef) results.getStates().get(0)).getState().getData();
-            Party counterparty = inputStateToSettle.getOwner();
+            Party counterparty = inputStateToSettle.getResponder();
 
             // Step 2. Check the party running this flows is the borrower.
             if (!inputStateToSettle.getIssuer().getOwningKey().equals(getOurIdentity().getOwningKey())) {
@@ -114,17 +126,31 @@ public class FXTradeSettleFlow {
                 tb.addOutputState(inputStateToSettle.pay(amount), IOUContract.IOU_CONTRACT_ID);
             }
             **/
+
+            /*
+            if (inputStateToSettle.getMatchstatus() == "MATCHED" && inputStateToSettle.getSettlementstatus() == "UNSETTLED"){
+                tb.addOutputState(new FXTradeState(getOurIdentity(),  responder,  buyamount,  sellamount,  buycurrency, sellcurrency, tradedate, settledate, exchangerate, buysell, "MATCHED", "SETTLED"));
+            }
+            */
+            tb.addOutputState(new FXTradeState(getOurIdentity(),  responder,  buyamount,  sellamount,  buycurrency, sellcurrency, tradedate, settledate, exchangerate, buysell, "MATCHED", "SETTLED"));
+
             // Step 8. Verify and sign the transaction.
             tb.verify(getServiceHub());
-            keyList.addAll(Arrays.asList(getOurIdentity().getOwningKey()));
-            SignedTransaction ptx = getServiceHub().signInitialTransaction(tb, keyList);
+            Party issuer = getOurIdentity();
+            //keyList.add(Arrays.asList(getOurIdentity().getOwningKey()));
+            //keyList.addAll(Arrays.asList(getOurIdentity().getOwningKey())); Issue
+            //SignedTransaction ptx = getServiceHub().signInitialTransaction(tb, keyList);
 
             // 11. Collect all of the required signatures from other Corda nodes using the CollectSignaturesFlow
             FlowSession session = initiateFlow(counterparty);
+            System.out.println("After Session Creation");
+            //SignedTransaction ptx = getServiceHub().signInitialTransaction(tb, keyList);
+            SignedTransaction signedTransaction = getServiceHub().signInitialTransaction(tb);
+            System.out.println("After Inital Transaction");
             //new IdentitySyncFlow.Send(session, ptx.getTx());
 
-            SignedTransaction fullySignedTransaction = subFlow(new CollectSignaturesFlow(ptx, Arrays.asList(session)));
-
+            SignedTransaction fullySignedTransaction = subFlow(new CollectSignaturesFlow(signedTransaction, singletonList(session)));
+            System.out.println("After Fully Signed Transaction");
             /* 12. Return the output of the FinalityFlow which sends the transaction to the notary for verification
              *     and the causes it to be persisted to the vault of appropriate nodes.
              */
