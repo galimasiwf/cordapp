@@ -168,7 +168,17 @@ public class MainController {
     ) throws IllegalArgumentException {
         // Get party objects for myself and the counterparty.
         Party me = proxy.nodeInfo().getLegalIdentities().get(0);
-        Party lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse(responder))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        Party lender;
+        if(responder=="PartyA"){
+            lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse("O=PartyA,L=London,C=GB"))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        }else if (responder=="PartyB"){
+            lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse("O=PartyB,L=New York,C=US"))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        }else if (responder =="PartyC"){
+            lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse("O=PartyC,L=Los Angelos,C=US"))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        }else {
+            lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse("O=PartyC,L=Los Angelos,C=US"))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        }
+        //Party lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse(responder))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
         // Create a new IOU states using the parameters given.
         try {
             FXTradeState state = new FXTradeState(me, lender, buyamount.intValue(), sellamount.intValue(), buycurrency,sellcurrency,tradedate,"032123",80,"Buy","UNMATCHED","SETTLED");
@@ -202,7 +212,17 @@ public class MainController {
     ) throws IllegalArgumentException {
         // Get party objects for myself and the counterparty.
         Party me = proxy.nodeInfo().getLegalIdentities().get(0);
-        Party lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse(responder))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        Party lender;
+        if(responder=="PartyA"){
+             lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse("O=PartyA,L=London,C=GB"))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        }else if (responder=="PartyB"){
+            lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse("O=PartyB,L=New York,C=US"))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        }else if (responder =="PartyC"){
+            lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse("O=PartyC,L=Los Angelos,C=US"))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        }else {
+            lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse("O=PartyC,L=Los Angelos,C=US"))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
+        }
+        //Party lender = Optional.ofNullable(proxy.wellKnownPartyFromX500Name(CordaX500Name.parse(responder))).orElseThrow(() -> new IllegalArgumentException("Unknown party name."));
         // Create a new IOU states using the parameters given.
         try {
             FXTradeState state = new FXTradeState(me, lender, buyamount.intValue(), sellamount.intValue(), buycurrency,sellcurrency,tradedate,"032123",80,"Buy","UNMATCHED","SETTLED");
@@ -251,6 +271,20 @@ public class MainController {
         }
     }
 
+    /*
+    Party getCordaPartyMapping(String party){
+     /*
+        Party cordaParty;
+        if (party == "PartyA")
+            cordaParty = new Party(O=PartyA,L=London,C=GB);
+        else if (party == "PartyB") {
+            cordaParty = "O=PartyB,L=New York,C=US";
+        }
+        else if (party == "PartyC") {
+            cordaParty = "O=PartyC,L=Los Angelos,C=US";
+        }
+    }
+    */
     /*
     @GetMapping(value = "/cash",produces = APPLICATION_JSON_VALUE)
     public List<StateAndRef<Cash.State>> getCash() {
